@@ -4,9 +4,9 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer2(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
-
+    ref_name = 'CustomUser'
     class Meta:
         model = User
         fields = [

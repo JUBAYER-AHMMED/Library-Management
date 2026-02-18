@@ -6,7 +6,7 @@ from book.paginations import DefaultPagination
 from django_filters.rest_framework import DjangoFilterBackend 
 from rest_framework.filters import SearchFilter,OrderingFilter
 from book.filters import BookFilter
-from .serializers import UserSerializer
+from api.serializers import UserSerializer2
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -26,4 +26,4 @@ class BookViewSet(ModelViewSet):
 # Create your views here.
 class UserViewSet(ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = UserSerializer2

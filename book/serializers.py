@@ -3,8 +3,14 @@ from decimal import Decimal
 from .models import Category, Author, Book, BorrowRecord
 # from .serializers import AuthorSerializer, CategorySerializer
 from django.utils import timezone
+from django.contrib.auth.models import Group
 
-from api.serializers import UserSerializer
+
+from api.serializers import UserSerializer2
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 
 class AuthorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,7 +26,7 @@ class CategorySerializer(serializers.ModelSerializer):
 class BookSerializer(serializers.ModelSerializer):
     author_detail = AuthorSerializer(source='author', read_only=True)
     category_detail = CategorySerializer(source='category', read_only=True)
-
+    # author = AuthorSerializer(source='author')
     class Meta:
         model = Book
         fields = [
@@ -40,7 +46,7 @@ class BookSerializer(serializers.ModelSerializer):
 
 class BorrowRecordSerializer(serializers.ModelSerializer):
     book_detail = BookSerializer(source='book', read_only=True)
-    member_detail = UserSerializer(source='member', read_only=True)
+    member_detail = UserSerializer2(source='member', read_only=True)
     class Meta:
         model = BorrowRecord
         fields = [
@@ -99,6 +105,12 @@ class ReturnBookSerializer(serializers.Serializer):
         except BorrowRecord.DoesNotExist:
             raise serializers.ValidationError("Borrow record not found.")
 
+        if record.member != self.context['request'].user:
+            raise serializers.ValidationError(
+                "You can only return your own borrowed books."
+            )
+
+
         if record.returned:
             raise serializers.ValidationError("Book already returned.")
 
@@ -113,3 +125,43 @@ class ReturnBookSerializer(serializers.Serializer):
         record.book.save()
         record.save()
         return record
+    
+
+# users/serializers.py
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = ['id', 'name']
+
+# users/serializers.py
+
+
+
+class AssignUserToGroupSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    group_name = serializers.CharField()
+
+    def validate(self, data):
+        try:
+            user = User.objects.get(id=data['user_id'])
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User not found.")
+
+        try:
+            group = Group.objects.get(name=data['group_name'])
+        except Group.DoesNotExist:
+            raise serializers.ValidationError("Group not found.")
+
+        data['user'] = user
+        data['group'] = group
+        return data
+
+    def save(self):
+        user = self.validated_data['user']
+        group = self.validated_data['group']
+
+        user.groups.clear()
+        user.groups.add(group)
+        return user
